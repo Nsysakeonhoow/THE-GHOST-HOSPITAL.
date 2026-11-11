@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="description" content="Game survival horror psikologis di rumah sakit terbengkalai. Temukan kunci, hindari hantu, dan keluar hidup-hidup.">
+    <meta name="author" content="Autonomous Product Studio">
+    <meta name="theme-color" content="#0a0c10">
+    <meta name="color-scheme" content="dark">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Langkahluka">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta property="og:type" content="game">
+    <meta property="og:title" content="Langkahluka: Rumah Sakit Senja">
+    <meta property="og:description" content="Game survival horror psikologis berbasis web.">
+    <meta property="og:locale" content="id_ID">
+    <meta property="og:site_name" content="Langkahluka">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Langkahluka: Rumah Sakit Senja">
+    <meta name="twitter:description" content="Game survival horror psikologis berbasis web.">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%230a0c10'/><path d='M16 6L6 26h20z' fill='%23ff3b3b'/></svg>">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%230a0c10'/><path d='M16 6L6 26h20z' fill='%23ff3b3b'/></svg>">
+    <title>Langkahluka: Rumah Sakit Senja</title>
+    <style>
+        :root {
+            --bg-color: #0a0c10;
+            --panel-bg: rgba(15, 18, 24, 0.92);
+            --text-main: #e2e8f0;
+            --text-muted: #94a3b8;
+            --accent-red: #ff3b3b;
+            --accent-yellow: #f5d76f;
+            --border-color: #2a3441;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: none;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100vh;
+            height: 100dvh;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            overflow: hidden;
+            overscroll-behavior: none;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #000;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        /* Noise Overlay */
+        .noise-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 10;
+            opacity: 0.6;
+        }
+
+        /* UI Screens */
+        .screen {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(10, 12, 16, 0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 20;
+            padding: 24px;
+            transition: opacity 0.3s ease;
+        }
+
+        .screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+            display: none;
+        }
+
+        h1 {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            color: var(--accent-red);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 12px;
+            text-align: center;
+            text-shadow: 0 0 20px rgba(255, 59, 59, 0.4);
+        }
+
+        p {
+            font-size: clamp(0.9rem, 2vw, 1.1rem);
+            color: var(--text-muted);
+            text-align: center;
+            max-width: 500px;
+            line-height: 1.6;
+            margin-bottom: 32px;
+        }
+
+        .btn-group {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            width: 100%;
+            max-width: 320px;
+        }
+
+        .btn {
+            background: transparent;
+            border: 2px solid var(--border-color);
+            color: var(--text-main);
+            padding: 16px 24px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border-radius: 4px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn:hover, .btn:focus-visible {
+            border-color: var(--accent-red);
+            color: var(--accent-red);
+            background: rgba(255, 59, 59, 0.05);
+            outline: none;
+        }
+
+        .btn.primary {
+            background: var(--accent-red);
+            border-color: var(--accent-red);
+            color: #fff;
+        }
+
+        .btn.primary:hover, .btn.primary:focus-visible {
+            background: #e03232;
+            border-color: #e03232;
+            color: #fff;
+        }
+
+        /* HUD */
+        #hud {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 15;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: env(safe-area-inset-top, 16px) env(safe-area-inset-right, 16px) env(safe-area-inset-bottom, 16px) env(safe-area-inset-left, 16px);
+        }
+
+        .hud-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            width: 100%;
+        }
+
+        .hud-panel {
+            background: rgba(10, 12, 16, 0.8);
+            border: 1px solid var(--border-color);
+            padding: 12px 18px;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            backdrop-filter: blur(4px);
+        }
+
+        .hud-panel span {
+            color: var(--accent-yellow);
+        }
+
+        .hud-buttons {
+            display: flex;
+            gap: 12px;
+            pointer-events: auto;
+        }
+
+        .icon-btn {
+            background: rgba(10, 12, 16, 0.8);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            width: 44px;
+            height: 44px;
+            border-radius: 4px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .icon-btn:hover {
+            border-color: var(--accent-red);
+            color: var(--accent-red);
+        }
+
+        /* Mobile Controls */
+        #mobile-controls {
+            position: absolute;
+            bottom: 24px;
+            left: 0; width: 100%;
+            display: none;
+            justify-content: space-between;
+            padding: 0 24px;
+            pointer-events: none;
+            z-index: 16;
+        }
+
+        .dpad {
+            display: grid;
+            grid-template-columns: repeat(3, 50px);
+            grid-template-rows: repeat(3, 50px);
+            gap: 4px;
+            pointer-events: auto;
+        }
+
+        .dpad-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            font-size: 1.2rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .dpad-btn:active {
+            background: rgba(255, 59, 59, 0.4);
+        }
+
+        .action-pad {
+            display: flex;
+            gap: 12px;
+            pointer-events: auto;
+            align-items: flex-end;
+        }
+
+        .action-btn {
+            width: 64px;
+            height: 64px;
+            background: rgba(255, 59, 59, 0.2);
+            border: 2px solid var(--accent-red);
+            color: #fff;
+            border-radius: 50%;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .action-btn:active {
+            background: var(--accent-red);
+        }
+
+        @media (max-width: 1024px) {
+            #mobile-controls {
+                display: flex;
+            }
+        }
+
+        /* Rotate Warning Overlay */
+        #rotate-warning {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: #0a0c10;
+            z-index: 100;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 24px;
+            text-align: center;
+        }
+
+        @media screen and (orientation: portrait) and (max-width: 900px) {
+            #rotate-warning {
+                display: flex;
+            }
+        }
+
+        /* Jumpscare Overlay */
+        #jumpscare-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: #ff0000;
+            z-index: 50;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.05s ease;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #jumpscare-overlay.active {
+            opacity: 0.9;
+            animation: shake 0.1s infinite;
+        }
+
+        @keyframes shake {
+            0% { transform: translate(5px, 5px) rotate(0deg); }
+            20% { transform: translate(-5px, -7px) rotate(-1deg); }
+            40% { transform: translate(-7px, 3px) rotate(1deg); }
+            60% { transform: translate(3px, 7px) rotate(0deg); }
+            80% { transform: translate(-3px, -3px) rotate(-1deg); }
+            100% { transform: translate(5px, 5px) rotate(1deg); }
+        }
+
+        .js-face {
+            font-size: 8rem;
+            color: #000;
+            text-shadow: 0 0 30px #fff;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="rotate-warning">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#ff3b3b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 16px; animation: pulse 1.5s infinite;"><rect width="18" height="12" x="3" y="6" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M10 12h4"/></svg>
+        <h2 style="font-family: 'JetBrains Mono'; color: #fff; margin-bottom: 8px;">Putar Perangkat Anda</h2>
+        <p>Game ini dirancang dalam mode Lanskap untuk pengalaman horor optimal di rumah sakit senja.</p>
+    </div>
+
+    <div id="game-container">
+        <div class="noise-overlay"></div>
+        <canvas id="gameCanvas"></canvas>
+
+        <div id="jumpscare-overlay">
+            <div class="js-face">😱</div>
+        </div>
+
+        <!-- HUD -->
+        <div id="hud" style="display: none;">
+            <div class="hud-top">
+                <div class="hud-panel">
+                    <div>LOKASI: <span id="hud-level">BANGSAL A-1</span></div>
+                    <div>KUNCI: <span id="hud-keys">0 / 3</span></div>
+                    <div>SENTER: <span id="hud-battery">100%</span></div>
+                </div>
+                <div class="hud-buttons">
+                    <button class="icon-btn" id="btn-mute" title="Mute Suara (M)">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+                    </button>
+                    <button class="icon-btn" id="btn-pause" title="Jeda (ESC)">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile Controls -->
+        <div id="mobile-controls">
+            <div class="dpad">
+                <div></div>
+                <button class="dpad-btn" id="mob-up">▲</button>
+                <div></div>
+                <button class="dpad-btn" id="mob-left">◀</button>
+                <div></div>
+                <button class="dpad-btn" id="mob-right">▶</button>
+                <div></div>
+                <button class="dpad-btn" id="mob-down">▼</button>
+                <div></div>
+            </div>
+            <div class="action-pad">
+                <button class="action-btn" id="mob-interact">AKSI</button>
+            </div>
+        </div>
+
+        <!-- Main Menu -->
+        <div id="screen-menu" class="screen">
+            <h1>Langkahluka</h1>
+            <p>Rumah Sakit Senja menyimpan rahasia kelam dan entitas yang mengintai. Kumpulkan 3 kunci darurat di labirin koridor gelap sebelum baterai sentermu habis.</p>
+            <div class="btn-group">
+                <button class="btn primary" id="btn-start">Mulai Berkelana</button>
+                <button class="btn" id="btn-howto">Panduan & Kontrol</button>
+            </div>
+        </div>
+
+        <!-- How to Play Screen -->
+        <div id="screen-howto" class="screen hidden">
+            <h1 style="font-size: 1.8rem; margin-bottom: 16px;">Panduan Penyelamatan</h1>
+            <div style="text-align: left; max-width: 450px; font-size: 0.95rem; color: var(--text-muted); margin-bottom: 24px; line-height: 1.6;">
+                <p style="text-align: left; margin-bottom: 8px;"><strong style="color: var(--text-main);">Gerakan:</strong> WASD atau Tombol Panah (Desktop) / D-Pad (Mobile).</p>
+                <p style="text-align: left; margin-bottom: 8px;"><strong style="color: var(--text-main);">Interaksi / Ambil Kunci:</strong> Spasi atau Tombol Aksi.</p>
+                <p style="text-align: left; margin-bottom: 8px;"><strong style="color: var(--text-main);">Tujuan:</strong> Cari 3 Kunci Bangsal dan capai Pintu Keluar bercahaya hijau.</p>
+                <p style="text-align: left; margin-bottom: 8px;"><strong style="color: var(--text-main);">Musuh:</strong> 3 hantu berkeliaran di kegelapan. Hindari sentuhan mereka atau hadapi jumpscare!</p>
+                <p style="text-align: left;"><strong style="color: var(--text-main);">Pintasan:</strong> [M] Mute, [ESC] Jeda, [R] Mulai Ulang.</p>
+            </div>
+            <button class="btn primary" id="btn-back-menu">Kembali</button>
+        </div>
+
+        <!-- Pause Screen -->
+        <div id="screen-pause" class="screen hidden">
+            <h1>Permainan Dijeda</h1>
+            <p>Tarik napas. Kegelapan masih menunggumu.</p>
+            <div class="btn-group">
+                <button class="btn primary" id="btn-resume">Lanjutkan</button>
+                <button class="btn" id="btn-restart-pause">Mulai Ulang</button>
+                <button class="btn" id="btn-exit-menu">Keluar ke Menu</button>
+            </div>
+        </div>
+
+        <!-- Game Over Screen -->
+        <div id="screen-gameover" class="screen hidden">
+            <h1 style="color: var(--accent-red);">Tertangkap Kegelapan</h1>
+            <p id="gameover-desc">Entitas rumah sakit berhasil menemukanmu di koridor sunyi.</p>
+            <div class="btn-group">
+                <button class="btn primary" id="btn-retry">Coba Lagi</button>
+                <button class="btn" id="btn-gameover-menu">Menu Utama</button>
+            </div>
+        </div>
+
+        <!-- Win Screen -->
+        <div id="screen-win" class="screen hidden">
+            <h1 style="color: var(--accent-yellow);">Berhasil Keluar!</h1>
+            <p>Kamu berhasil menembus labirin Rumah Sakit Senja dan menyelamatkan diri sebelum pagi tiba.</p>
+            <div class="btn-group">
+                <button class="btn primary" id="btn-play-again">Main Lagi</button>
+                <button class="btn" id="btn-win-menu">Menu Utama</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // // [SPAWN VALIDATION] Player spawn di (1, 1) = tile (col=1, row=1). Verified: MAP[1][1] === 0. 4 arah walkable.
+        
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // State Machine: "menu" | "playing" | "paused" | "gameover" | "win"
+        let gameState = 'menu';
+        let isMuted = false;
+        let audioCtx = null;
+
+        // Game Configuration & Map (0: Floor, 1: Wall, 2: Key, 3: Exit Door)
+        const TILE_SIZE = 40;
+        const MAP = [
+            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+            [1,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,0,2,0,1],
+            [1,0,1,0,1,0,1,1,1,0,1,0,1,1,1,1,1,1,0,1],
+            [1,0,1,0,0,0,0,0,1,0,0,0,1,0,0,0,0,1,0,1],
+            [1,0,1,1,1,1,1,0,1,1,1,1,1,0,1,1,0,1,0,1],
+            [1,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,1],
+            [1,1,1,1,1,0,1,1,1,1,1,0,1,1,1,0,1,1,1,1],
+            [1,2,0,0,1,0,0,0,0,0,1,0,1,0,0,0,1,3,0,1],
+            [1,1,1,0,1,1,1,0,1,0,1,0,1,0,1,1,1,1,0,1],
+            [1,0,0,0,0,0,1,0,1,0,0,0,1,0,0,0,0,1,0,1],
+            [1,0,1,1,1,0,1,1,1,1,1,1,1,1,1,1,0,1,0,1],
+            [1,0,0,2,1,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1],
+            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+        ];
+
+        let player = {
+            x: 1.5 * TILE_SIZE,
+            y: 1.5 * TILE_SIZE,
+            radius: 12,
+            speed: 3.5,
+            keys: 0,
+            maxKeys: 3,
+            battery: 100
+        };
+
+        let ghosts = [
+            { x: 18.5 * TILE_SIZE, y: 1.5 * TILE_SIZE, speed: 1.2, type: 'Suster Pucat' },
+            { x: 18.5 * TILE_SIZE, y: 11.5 * TILE_SIZE, speed: 1.4, type: 'Pasien Gelap' },
+            { x: 9.5 * TILE_SIZE, y: 5.5 * TILE_SIZE, speed: 1.0, type: 'Dokter Bayangan' }
+        ];
+
+        let keysList = [];
+        let exitDoor = { x: 17.5 * TILE_SIZE, y: 7.5 * TILE_SIZE };
+
+        let keysPressed = {};
+        let lastTime = 0;
+        let dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+        function initMapItems() {
+            keysList = [];
+            player.keys = 0;
+            player.battery = 100;
+            player.x = 1.5 * TILE_SIZE;
+            player.y = 1.5 * TILE_SIZE;
+
+            for (let r = 0; r < MAP.length; r++) {
+                for (let c = 0; c < MAP[r].length; c++) {
+                    if (MAP[r][c] === 2) {
+                        keysList.push({ x: (c + 0.5) * TILE_SIZE, y: (r + 0.5) * TILE_SIZE, collected: false });
+                    }
+                }
+            }
+
+            ghosts[0].x = 18.5 * TILE_SIZE; ghosts[0].y = 1.5 * TILE_SIZE;
+            ghosts[1].x = 18.5 * TILE_SIZE; ghosts[1].y = 11.5 * TILE_SIZE;
+            ghosts[2].x = 9.5 * TILE_SIZE; ghosts[2].y = 5.5 * TILE_SIZE;
+        }
+
+        // Audio Synthesizer (Web Audio API)
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function playCreepyDrone() {
+            if (isMuted || !audioCtx) return;
+            try {
+                let osc = audioCtx.createOscillator();
+                let gain = audioCtx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(60, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 1.5);
+                
+                gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 1.5);
+
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 1.5);
+            } catch(e) {}
+        }
+
+        function playJumpscareSound() {
+            if (isMuted || !audioCtx) return;
+            try {
+                let osc = audioCtx.createOscillator();
+                let noiseBuffer = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.8, audioCtx.sampleRate);
+                let output = noiseBuffer.getChannelData(0);
+                for (let i = 0; i < noiseBuffer.length; i++) {
+                    output[i] = Math.random() * 2 - 1;
+                }
+                let whiteNoise = audioCtx.createBufferSource();
+                whiteNoise.buffer = noiseBuffer;
+
+                let filter = audioCtx.createBiquadFilter();
+                filter.type = 'bandpass';
+                filter.frequency.value = 1000;
+
+                let gain = audioCtx.createGain();
+                gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.8);
+
+                whiteNoise.connect(filter);
+                filter.connect(gain);
+                gain.connect(audioCtx.destination);
+                whiteNoise.start();
+            } catch(e) {}
+        }
+
+        // Resize Canvas
+        function resizeCanvas() {
+            canvas.width = MAP[0].length * TILE_SIZE * dpr;
+            canvas.height = MAP.length * TILE_SIZE * dpr;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+        window.addEventListener('resize', debounce(resizeCanvas, 150));
+
+        function debounce(func, wait) {
+            let timeout;
+            return function(...args) {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(this, args), wait);
+            };
+        }
+
+        // Collision Check
+        function checkCollision(x, y, radius) {
+            let x1 = Math.floor((x - radius) / TILE_SIZE);
+            let x2 = Math.floor((x + radius) / TILE_SIZE);
+            let y1 = Math.floor((y - radius) / TILE_SIZE);
+            let y2 = Math.floor((y + radius) / TILE_SIZE);
+
+            for (let r = y1; r <= y2; r++) {
+                for (let c = x1; c <= x2; c++) {
+                    if (r < 0 || r >= MAP.length || c < 0 || c >= MAP[0].length || MAP[r][c] === 1) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        // Input Handlers
+        window.addEventListener('keydown', e => {
+            keysPressed[e.key.toLowerCase()] = true;
+            if (e.key === 'm' || e.key === 'M') toggleMute();
+            if (e.key === 'Escape' && (gameState === 'playing' || gameState === 'paused')) togglePause();
+            if (e.key === 'r' || e.key === 'R') {
+                if (gameState === 'playing') {
+                    if (confirm('Mulai ulang permainan?')) startGame();
+                }
+            }
+        });
+
+        window.addEventListener('keyup', e => {
+            keysPressed[e.key.toLowerCase()] = false;
+        });
+
+        // Touch / Mobile D-Pad Bindings
+        function bindTouchButton(id, keyName) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.addEventListener('pointerdown', (e) => { e.preventDefault(); keysPressed[keyName] = true; initAudio(); });
+            el.addEventListener('pointerup', (e) => { e.preventDefault(); keysPressed[keyName] = false; });
+            el.addEventListener('pointercancel', (e) => { e.preventDefault(); keysPressed[keyName] = false; });
+        }
+
+        bindTouchButton('mob-up', 'arrowup');
+        bindTouchButton('mob-down', 'arrowdown');
+        bindTouchButton('mob-left', 'arrowleft');
+        bindTouchButton('mob-right', 'arrowright');
+
+        document.getElementById('mob-interact').addEventListener('pointerdown', (e) => {
+            e.preventDefault();
+            checkInteract();
+        });
+
+        // Game Loop
+        function update(dt) {
+            if (gameState !== 'playing') return;
+
+            let dx = 0;
+            let dy = 0;
+
+            if (keysPressed['w'] || keysPressed['arrowup'] || keysPressed['z']) dy -= 1;
+            if (keysPressed['s'] || keysPressed['arrowdown']) dy += 1;
+            if (keysPressed['a'] || keysPressed['arrowleft']) dx -= 1;
+            if (keysPressed['d'] || keysPressed['arrowright']) dx += 1;
+
+            if (dx !== 0 && dy !== 0) {
+                dx *= 0.7071;
+                dy *= 0.7071;
+            }
+
+            let newX = player.x + dx * player.speed;
+            let newY = player.y + dy * player.speed;
+
+            if (!checkCollision(newX, player.y, player.radius)) player.x = newX;
+            if (!checkCollision(player.x, newY, player.radius)) player.y = newY;
+
+            // Battery drain slowly
+            player.battery = Math.max(0, player.battery - 0.005);
+
+            // Ghost AI movement
+            ghosts.forEach(g => {
+                let angle = Math.atan2(player.y - g.y, player.x - g.x);
+                let gx = g.x + Math.cos(angle) * g.speed;
+                let gy = g.y + Math.sin(angle) * g.speed;
+
+                if (!checkCollision(gx, g.y, 10)) g.x = gx;
+                if (!checkCollision(g.x, gy, 10)) g.y = gy;
+
+                // Check collision with player
+                let dist = Math.hypot(player.x - g.x, player.y - g.y);
+                if (dist < 20) {
+                    triggerJumpscare();
+                }
+            });
+
+            // Update HUD
+            document.getElementById('hud-keys').innerText = `${player.keys} / ${player.maxKeys}`;
+            document.getElementById('hud-battery').innerText = `${Math.ceil(player.battery)}%`;
+        }
+
+        function checkInteract() {
+            // Check keys
+            keysList.forEach(k => {
+                if (!k.collected && Math.hypot(player.x - k.x, player.y - k.y) < 30) {
+                    k.collected = true;
+                    player.keys++;
+                    playCreepyDrone();
+                }
+            });
+
+            // Check exit door
+            if (player.keys >= player.maxKeys) {
+                if (Math.hypot(player.x - exitDoor.x, player.y - exitDoor.y) < 40) {
+                    winGame();
+                }
+            }
+        }
+
+        function render() {
+            ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
+
+            // Draw Map
+            for (let r = 0; r < MAP.length; r++) {
+                for (let c = 0; c < MAP[r].length; c++) {
+                    let tile = MAP[r][c];
+                    if (tile === 1) {
+                        ctx.fillStyle = '#161a22';
+                        ctx.fillRect(c * TILE_SIZE, r * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                        ctx.strokeStyle = '#232a36';
+                        ctx.strokeRect(c * TILE_SIZE, r * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                    } else {
+                        ctx.fillStyle = '#0f1218';
+                        ctx.fillRect(c * TILE_SIZE, r * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                        ctx.strokeStyle = '#141820';
+                        ctx.strokeRect(c * TILE_SIZE, r * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                    }
+                }
+            }
+
+            // Draw Exit Door
+            ctx.fillStyle = player.keys >= player.maxKeys ? '#2ecc71' : '#e74c3c';
+            ctx.fillRect(exitDoor.x - 15, exitDoor.y - 15, 30, 30);
+            ctx.fillStyle = '#fff';
+            ctx.font = '10px JetBrains Mono';
+            ctx.fillText('PINTU', exitDoor.x - 14, exitDoor.y - 18);
+
+            // Draw Keys
+            keysList.forEach(k => {
+                if (!k.collected) {
+                    ctx.fillStyle = '#f5d76f';
+                    ctx.beginPath();
+                    ctx.arc(k.x, k.y, 6, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            });
+
+            // Draw Ghosts
+            ghosts.forEach(g => {
+                ctx.fillStyle = 'rgba(255, 59, 59, 0.7)';
+                ctx.beginPath();
+                ctx.arc(g.x, g.y, 12, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#fff';
+                ctx.font = '9px JetBrains Mono';
+                ctx.fillText('👻', g.x - 8, g.y - 16);
+            });
+
+            // Draw Player
+            ctx.fillStyle = '#3498db';
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Flashlight lighting mask (Darkness overlay)
+            ctx.save();
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.fillStyle = 'rgba(5, 6, 8, 0.92)';
+            ctx.fillRect(0, 0, canvas.width / dpr, canvas.height / dpr);
+
+            ctx.globalCompositeOperation = 'destination-out';
+            let gradient = ctx.createRadialGradient(player.x, player.y, 10, player.x, player.y, 130 * (player.battery / 100 + 0.3));
+            gradient.addColorStop(0, 'rgba(0,0,0,1)');
+            gradient.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, 150, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
+
+        let animFrameId;
+        function gameLoop(timestamp) {
+            if (!lastTime) lastTime = timestamp;
+            let dt = (timestamp - lastTime) / 1000;
+            if (dt > 0.05) dt = 0.05;
+            lastTime = timestamp;
+
+            if (gameState === 'playing') {
+                update(dt);
+                render();
+            }
+            animFrameId = requestAnimationFrame(gameLoop);
+        }
+
+        // State Transitions
+        function startGame() {
+            initAudio();
+            initMapItems();
+            gameState = 'playing';
+            document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+            document.getElementById('hud').style.display = 'flex';
+        }
+
+        function togglePause() {
+            if (gameState === 'playing') {
+                gameState = 'paused';
+                document.getElementById('screen-pause').classList.remove('hidden');
+            } else if (gameState === 'paused') {
+                gameState = 'playing';
+                document.getElementById('screen-pause').classList.add('hidden');
+            }
+        }
+
+        function triggerJumpscare() {
+            gameState = 'gameover';
+            playJumpscareSound();
+            const js = document.getElementById('jumpscare-overlay');
+            js.classList.add('active');
+            setTimeout(() => {
+                js.classList.remove('active');
+                document.getElementById('hud').style.display = 'none';
+                document.getElementById('screen-gameover').classList.remove('hidden');
+            }, 600);
+        }
+
+        function winGame() {
+            gameState = 'win';
+            document.getElementById('hud').style.display = 'none';
+            document.getElementById('screen-win').classList.remove('hidden');
+        }
+
+        function toggleMute() {
+            isMuted = !isMuted;
+            document.getElementById('btn-mute').style.borderColor = isMuted ? 'var(--accent-red)' : 'var(--border-color)';
+        }
+
+        // Button Event Listeners
+        document.getElementById('btn-start').addEventListener('click', startGame);
+        document.getElementById('btn-howto').addEventListener('click', () => {
+            document.getElementById('screen-menu').classList.add('hidden');
+            document.getElementById('screen-howto').classList.remove('hidden');
+        });
+        document.getElementById('btn-back-menu').addEventListener('click', () => {
+            document.getElementById('screen-howto').classList.add('hidden');
+            document.getElementById('screen-menu').classList.remove('hidden');
+        });
+        document.getElementById('btn-pause').addEventListener('click', togglePause);
+        document.getElementById('btn-resume').addEventListener('click', togglePause);
+        document.getElementById('btn-restart-pause').addEventListener('click', () => {
+            document.getElementById('screen-pause').classList.add('hidden');
+            startGame();
+        });
+        document.getElementById('btn-exit-menu').addEventListener('click', () => {
+            document.getElementById('screen-pause').classList.add('hidden');
+            document.getElementById('hud').style.display = 'none';
+            document.getElementById('screen-menu').classList.remove('hidden');
+            gameState = 'menu';
+        });
+        document.getElementById('btn-retry').addEventListener('click', startGame);
+        document.getElementById('btn-gameover-menu').addEventListener('click', () => {
+            document.getElementById('screen-gameover').classList.add('hidden');
+            document.getElementById('screen-menu').classList.remove('hidden');
+            gameState = 'menu';
+        });
+        document.getElementById('btn-play-again').addEventListener('click', startGame);
+        document.getElementById('btn-win-menu').addEventListener('click', () => {
+            document.getElementById('screen-win').classList.add('hidden');
+            document.getElementById('screen-menu').classList.remove('hidden');
+            gameState = 'menu';
+        });
+
+        // Visibility & Blur Auto-pause
+        window.addEventListener('blur', () => {
+            if (gameState === 'playing') togglePause();
+        });
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden && gameState === 'playing') togglePause();
+        });
+
+        // Initialize canvas sizing
+        resizeCanvas();
+        requestAnimationFrame(gameLoop);
+    </script>
+</body>
+</html>
